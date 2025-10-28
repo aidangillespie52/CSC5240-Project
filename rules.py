@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Tuple
 import numpy as np
 from board import Board
+from typing import Optional
 
 @dataclass
 class Result:
@@ -19,49 +20,51 @@ def single_missing(bd: Board) -> Result:
     Example:
     12345.789 -> 6 would be the missing in the row
     """
-    
-    # check the rows
-    for y in range(bd.size):
-        num_missing = bd.count_empty_row(y)
+    def check_empty(arr: np.array, x: int) -> Optional[Result]:
+        num_missing = bd.count_empty(arr)
         
         if num_missing != 1:
-            continue
+            return None
         
-        row = bd.get_row(y)
-        missing_digit_arr = np.setdiff1d(bd.allowed_values(), row)
+        missing_digit_arr = np.setdiff1d(bd.allowed_values(), arr)
         
         if len(missing_digit_arr) != 1:
             raise ValueError("the board is invalid")
         
-        x = int(np.where(row == 0)[0][0])
+        y = int(np.where(arr == 0)[0][0])
         missing_digit = int(missing_digit_arr[0])
         
         return Result((x,y), missing_digit)
-    
-    # check the cols
-    for x in range(bd.size):
-        num_missing = bd.count_empty_col(x)
+
+    # check rows and cols
+    for i in range(bd.size):
+        row = bd.get_row(i)
+        col = bd.get_col(i)
+
+        # row
+        res = check_empty(row, i)
+        if res:
+            return res
         
-        if num_missing != 1:
+        # col
+        res = check_empty(col, i)
+        if res:
+            res.idx = res.idx[::-1]
+            return res
+    
+    for i in range(bd.num_cells):
+        cell = bd.get_cell(i)
+        res = check_empty(cell, i)
+        if not res:
             continue
         
-        col = bd.get_col(x)
-        print(col)
-        
-        missing_digit_arr = np.setdiff1d(bd.allowed_values(), col)
-        
-        if len(missing_digit_arr) != 1:
-            raise ValueError("the board is invalid")
-        
-        y = int(np.where(col == 0)[0][0])
-        missing_digit = int(missing_digit_arr[0])
-        
-        return Result((x,y), missing_digit)
-    
-    # check the boxes
-    # TODO: implement the checking the boxes for single digits missing
+        _, arr_idx = res.idx 
+        x,y = bd.cell_index_to_board_index(i, arr_idx)
+        res.idx = (x,y)
+        return res
     
 if __name__ == '__main__':
+    print("Test col:")
     b = Board(9,3,3)
     r = np.array(b.allowed_values())
     np.random.shuffle(r)
@@ -74,3 +77,34 @@ if __name__ == '__main__':
     print(b)
     res = single_missing(b)
     print(res)
+
+    print("Test row:")
+    b = Board(9,3,3)
+    r = np.array(b.allowed_values())
+    np.random.shuffle(r)
+    
+    b[3, :] = r
+    np.random.shuffle(r)
+    b[5, :] = r
+    b[5,3] = 0
+    
+    print(b)
+    res = single_missing(b)
+    print(res)
+
+    print("Test cell:")
+    b = Board(9,3,3)
+    b[3,0] = 9
+    b[3,1] = 5
+    b[3,2] = 3
+    b[4,0] = 1
+    b[4,1] = 4
+    b[4,2] = 6
+    b[5,0] = 7
+    b[5,1] = 8
+    b[5,2] = 0
+
+    print(b)
+    res = single_missing(b)
+    print(res)
+
