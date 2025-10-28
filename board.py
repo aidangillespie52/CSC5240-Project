@@ -13,6 +13,7 @@ class Board:
         self.box_rows = box_rows
         self.fill = fill
         self._grid = np.full((size, size), fill, dtype=int)
+        self.num_cells = int((size / box_cols) * (size / box_rows))
 
     @staticmethod
     def _validate_init(size, box_rows, box_cols):
@@ -103,29 +104,70 @@ class Board:
             
             if len(set(filtered_col)) != len(filtered_col):
                 return False
-        
-        # TODO: check boxes
-        
+
+        # check cells
+        for z in range(self.num_cells):
+            cell = self.get_cell(z)
+            filtered_cell = cell[cell != 0]
+
+            if len(set(filtered_cell)) != len(filtered_cell):
+                return False
+
         return True
     
-    def count_empty(self):  return np.count_nonzero(self._grid == 0)
-    def count_empty_row(self, y: int) -> int:   return np.count_nonzero(self._grid[y, :] == 0)
-    def count_empty_col(self, x: int) -> int:   return np.count_nonzero(self._grid[:, x] == 0)
+    def count_empty(self, arr: np.array) -> int:   return np.count_nonzero(arr == 0)
     def get_row(self, y: int):  return self._grid[y, :]
     def get_col(self, x: int):  return self._grid[:, x]
     def allowed_values(self):   return np.array(range(1, self.size + 1))
+    def get_cell(self, idx: int):
+        """
+        Returns an array of values within queried cell. Cells are ordered from
+        top left to bottom right.
+        """
+        if not (0 <= idx <= self.num_cells - 1):
+            raise ValueError(f"cell {idx} is not valid")
+        
+        boxes_per_row = self.size // self.box_cols # number of boxes across
+
+        box_row = idx // boxes_per_row             # which box row
+        box_col = idx % boxes_per_row              # which box column
+
+        r0 = box_row * self.box_rows
+        r1 = r0 + self.box_rows
+        c0 = box_col * self.box_cols
+        c1 = c0 + self.box_cols
+
+        return self._grid[r0:r1, c0:c1].copy().ravel()
+    
+    def cell_index_to_board_index(self, cell_idx: int, k: int):
+        """
+        Map index k (0..box_rows*box_cols-1) inside the raveled cell `cell_idx`
+        to:
+        - (r, c) on the whole board
+        """
+        if not (0 <= cell_idx < self.num_cells):
+            raise ValueError("bad cell_idx")
+        if not (0 <= k < self.box_rows * self.box_cols):
+            raise ValueError("bad k")
+
+        boxes_per_row = self.size // self.box_cols
+        box_row = cell_idx // boxes_per_row
+        box_col = cell_idx % boxes_per_row
+
+        r0 = box_row * self.box_rows
+        c0 = box_col * self.box_cols
+
+        dr = k // self.box_cols
+        dc = k % self.box_cols
+
+        r = r0 + dr
+        c = c0 + dc
+
+        return (r, c)
 
 if __name__ == '__main__':
     b = Board(9, 3, 3)
     b.random()
     print(b)
     print("valid:", b.is_valid())
-    
-    b = Board(9,3,3)
-    r = np.array(b.allowed_values())
-    np.random.shuffle(r)    
-    b[2, :] = r
-    b[2,5] = 0
-
-    print(b)
-    print("valid:", b.is_valid())
+    print(b.get_cell(8))
