@@ -3,6 +3,7 @@
 # imports
 import numpy as np
 import random
+from utils import read_sudoku
 
 class Board:
     def __init__(self, size: int, box_cols: int, box_rows: int, fill=0):
@@ -115,6 +116,24 @@ class Board:
 
         return True
     
+    def get_candidates(self):
+        candidates = [[self.fill for _ in range(self.size)] for _ in range(self.size)]
+        for (x, y), value in np.ndenumerate(self._grid):
+            if value != 0:
+                candidates[x][y] = [0]
+            
+            row = self.get_row(y)
+            col = self.get_col(x)
+            cell_idx,_ = self.board_index_to_cell_index(y,x)
+            cell = self.get_cell(cell_idx)
+                
+            not_possible = np.union1d(np.union1d(row, col), cell)
+            possible_values = np.setdiff1d(self.allowed_values(), not_possible)
+
+            candidates[y][x] = possible_values
+        
+        return candidates
+            
     def count_empty(self, arr: np.array) -> int:   return np.count_nonzero(arr == 0)
     def get_row(self, y: int):  return self._grid[y, :]
     def get_col(self, x: int):  return self._grid[:, x]
@@ -164,10 +183,31 @@ class Board:
         c = c0 + dc
 
         return (r, c)
+    
+    def board_index_to_cell_index(self, r: int, c: int):
+        """
+        Map (r, c) on the whole board to:
+        - cell_idx (which 3x3 or box cell it's in)
+        - k (index inside that cell's raveled view)
+        """
+        if not (0 <= r < self.size and 0 <= c < self.size):
+            raise ValueError("bad board index")
 
+        boxes_per_row = self.size // self.box_cols
+
+        box_row = r // self.box_rows
+        box_col = c // self.box_cols
+        cell_idx = box_row * boxes_per_row + box_col
+
+        dr = r % self.box_rows
+        dc = c % self.box_cols
+        k = dr * self.box_cols + dc
+
+        return cell_idx, k
+    
+    def read(self, filepath):
+        self._grid = read_sudoku(filepath)
+        
 if __name__ == '__main__':
     b = Board(9, 3, 3)
     b.random()
-    print(b)
-    print("valid:", b.is_valid())
-    print(b.get_cell(8))
