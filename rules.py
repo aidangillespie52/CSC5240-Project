@@ -29,11 +29,9 @@ def find_single_candidates(bd: Board) -> Optional[Result]:
     
     return None
 
-if __name__ == '__main__':
-    b = Board(9,3,3)
-    b.read("sample.txt")
-    print(b)
-    
+
+# TODO: to where it returns a new board rather than a solved board
+def solve(b):
     r = True
     i = 0
     while r:
