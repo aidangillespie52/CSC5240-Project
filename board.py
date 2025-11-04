@@ -3,7 +3,6 @@
 # imports
 import numpy as np
 import random
-from utils import read_sudoku
 
 class Board:
     def __init__(self, size: int, box_cols: int, box_rows: int, fill=0):
@@ -204,10 +203,22 @@ class Board:
         k = dr * self.box_cols + dc
 
         return cell_idx, k
-    
-    def read(self, filepath):
-        self._grid = read_sudoku(filepath)
+
+    def read_file(self, filepath):
+        board = []
         
+        with open(filepath, "r") as f:
+            for line in f.readlines():
+                row = []
+                s = line.strip()
+                
+                for x in s:
+                    row.append(int(x))
+
+                board.append(row)
+        
+        self._grid = np.array(board)
+
 if __name__ == '__main__':
     b = Board(9, 3, 3)
     b.random()
